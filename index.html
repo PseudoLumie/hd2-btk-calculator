@@ -1,0 +1,872 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e0e0c">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>绝地潜兵 2 · 武器击杀阈值与BTK计算器</title>
+<style>
+  :root{
+    --bg:#0e0e0c; --panel:#161613; --panel2:#1d1d19; --line:#2a2a25;
+    --text:#e9e6dd; --muted:#8b877b; --accent:#f2c14e; --accent2:#7fb069;
+    --bad:#d96b52; --blue:#6c9bd1;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;
+    font-size:14px; line-height:1.55;
+  }
+  header{padding:26px 28px 10px; border-bottom:1px solid var(--line)}
+  h1{margin:0; font-size:22px; letter-spacing:.5px; font-weight:650}
+  h1 .tag{
+    font-size:11px; vertical-align:middle; margin-left:8px; padding:2px 7px;
+    border:1px solid var(--accent); color:var(--accent); border-radius:3px; font-weight:500;
+  }
+  .sub{margin:8px 0 0; color:var(--muted); font-size:13px; max-width:900px}
+  main{display:grid; grid-template-columns:340px 1fr; gap:18px; padding:18px 28px 40px; align-items:start}
+  @media (max-width:900px){ main{grid-template-columns:1fr} }
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:16px}
+  .panel h2{margin:0 0 12px; font-size:13px; letter-spacing:.8px; color:var(--muted); font-weight:600; text-transform:uppercase}
+  label{display:block; margin-bottom:12px}
+  label span{display:block; font-size:12px; color:var(--muted); margin-bottom:4px}
+  select,input[type=range]{width:100%}
+  select{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:4px; padding:7px 8px; font-size:13px; font-family:inherit;
+  }
+  select:focus{outline:1px solid var(--accent)}
+  optgroup{color:var(--accent); font-size:12px}
+  option{color:var(--text); background:var(--panel2)}
+
+  .sec{margin:20px 0 2px; font-size:12px; letter-spacing:.6px; color:var(--muted); text-transform:uppercase; font-weight:600}
+  .verdict{
+    font-size:16px; line-height:1.7; margin:0 0 16px;
+  }
+  .verdict b{color:var(--accent); font-size:19px}
+  .kpis{display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:18px}
+  @media (max-width:1100px){ .kpis{grid-template-columns:repeat(2,1fr)} }
+  .kpi{background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:10px 12px}
+  .kpi .k{font-size:11px; color:var(--muted); letter-spacing:.4px}
+  .kpi .v{font-size:22px; font-weight:650; color:var(--accent); line-height:1.2}
+  .kpi .v small{font-size:12px; color:var(--muted); font-weight:400}
+
+  .bands{display:flex; height:46px; border-radius:4px; overflow:hidden; border:1px solid var(--line); margin-bottom:6px}
+  .band{position:relative; display:flex; align-items:center; justify-content:center; font-size:12px; color:#0e0e0c; font-weight:650; min-width:0}
+  .band span{white-space:nowrap; overflow:hidden}
+  .axis{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-bottom:16px}
+
+  svg{display:block; width:100%; height:auto; background:var(--panel2); border:1px solid var(--line); border-radius:5px}
+  table{width:100%; border-collapse:collapse; font-size:13px; margin-top:8px}
+  th,td{text-align:left; padding:7px 9px; border-bottom:1px solid var(--line)}
+  th{color:var(--muted); font-weight:600; font-size:11px; letter-spacing:.4px; text-transform:uppercase}
+  th.num,td.num{font-variant-numeric:tabular-nums; text-align:right}
+  tr:last-child td{border-bottom:none}
+  .pill{display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; border:1px solid}
+  .pill.ok{color:var(--accent2); border-color:var(--accent2)}
+  .pill.guess{color:var(--accent); border-color:var(--accent)}
+  .pill.miss{color:var(--bad); border-color:var(--bad)}
+  .pill.info{color:var(--blue); border-color:var(--blue)}
+
+  details{margin-top:16px; border-top:1px solid var(--line); padding-top:12px}
+  summary{cursor:pointer; color:var(--muted); font-size:12px; letter-spacing:.5px; text-transform:uppercase}
+  .formula{margin-top:12px; font-family:"Cascadia Mono",Consolas,monospace; font-size:12.5px; line-height:1.85; color:#cfcbbf; white-space:pre-wrap; overflow-x:auto}
+  .formula .hl{color:var(--accent)}
+  .formula .dim{color:var(--muted)}
+  .note{font-size:12px; color:var(--muted); margin-top:10px}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:18px}
+  @media (max-width:1100px){ .grid2{grid-template-columns:1fr} }
+  .evid{margin-top:18px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+  @media (max-width:1100px){ .evid{grid-template-columns:1fr} }
+  .evid div{background:var(--panel2); border:1px solid var(--line); border-radius:5px; padding:10px 12px; font-size:12px; color:var(--muted)}
+  .evid h3{margin:0 0 6px; font-size:12px; color:var(--text)}
+  .evid ul{margin:0; padding-left:16px}
+  .evid li{margin:3px 0}
+  .warn{color:var(--bad)}
+
+  /* ---------- 移动端 ---------- */
+  @media (max-width: 760px){
+    header{padding:16px 14px 8px}
+    h1{font-size:19px}
+    h1 .tag{font-size:10px}
+    .sub{font-size:12.5px}
+    main{display:block; padding:12px 10px 24px}
+    .panel{padding:12px; margin-bottom:12px}
+    .panel h2{font-size:12px; margin-bottom:10px}
+    /* 触控友好：下拉框 44px 高、16px 字号（iOS 不会自动放大） */
+    select{font-size:16px; min-height:44px; padding:10px}
+    label{margin-bottom:14px}
+    label span{font-size:12.5px}
+    input[type=range]{height:32px}
+    .verdict{font-size:14px; line-height:1.65}
+    .verdict b{font-size:16px}
+    .kpis{grid-template-columns:repeat(2,1fr); gap:8px}
+    .kpi{padding:9px 10px}
+    .kpi .v{font-size:18px}
+    .bands{height:38px}
+    .band{font-size:11px}
+    /* 表格横向滚动，不撑破页面 */
+    #breakTable, #cmp{overflow-x:auto; -webkit-overflow-scrolling:touch}
+    #cmp table, #breakTable table{min-width:520px; font-size:12.5px}
+    th,td{padding:6px 8px}
+    .evid{grid-template-columns:1fr}
+    .formula{font-size:11.5px; line-height:1.7}
+    svg{min-height:220px}
+    .sec{margin-top:16px}
+  }
+  @media (max-width: 760px) and (orientation: landscape){
+    main{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  }
+  .kpi-sub{font-size:11px; color:var(--muted); line-height:1.4; margin-top:3px; border-top:1px solid var(--line); padding-top:3px}
+  .kpi-sub b{color:var(--accent); font-weight:600}
+  .chk-head{font-size:12.5px; color:var(--text); margin:12px 0 4px; font-weight:600}
+  .chk-count{color:var(--accent); font-weight:400; margin-left:6px}
+  .chk-note{font-size:11.5px; color:var(--muted); line-height:1.5; margin-bottom:6px}
+  .chk-tools{display:flex; gap:6px; margin-bottom:6px}
+  .chk-tools button{
+    background:var(--panel2); color:var(--text); border:1px solid var(--line);
+    border-radius:4px; padding:4px 10px; font-size:12px; cursor:pointer; font-family:inherit;
+  }
+  .chk-tools button:hover{border-color:var(--accent)}
+  .chk-list{max-height:230px; overflow-y:auto; border:1px solid var(--line); border-radius:4px; background:var(--panel2)}
+  .chk-list label{
+    display:flex; align-items:center; gap:8px; margin:0; padding:7px 9px;
+    font-size:12.5px; cursor:pointer; border-bottom:1px solid var(--line);
+  }
+  .chk-list label:last-child{border-bottom:none}
+  .chk-list label:hover{background:#232320}
+  .chk-list input[type=checkbox]{width:16px; height:16px; accent-color:var(--accent); cursor:pointer; flex:none}
+  .chk-list .ap{color:var(--muted); font-size:11.5px}
+  .boot-notice{
+    margin:12px 16px; padding:12px 14px; border-radius:6px;
+    background:#26220f; border:1px solid var(--accent); color:#efe3c0;
+    font-size:13px; line-height:1.7;
+  }
+  .boot-notice b{color:#fff}
+  .boot-error{
+    display:none; margin:12px 16px; padding:12px 14px; border-radius:6px;
+    background:#2a1512; border:1px solid var(--bad); color:#f0d6cf;
+    font-size:13px; line-height:1.6; white-space:pre-wrap;
+  }
+  .boot-error b{color:#fff}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>绝地潜兵 2 · 武器击杀阈值与BTK计算器<span class="tag">v0.12.4</span></h1>
+  <p class="sub">
+    发数不是标量，是距离的<b>阶梯函数</b>。这里算的是「几米内几发、几米外几发」，而不是一个平均值。
+    要打几发才能打死（BTK = Bullets To Kill）、要打多久（TTK = Time To Kill，按射速折算）。V0.12.4 包括原版绝大部分潜兵装备和武器，DoT 伤害作为武器条目独立计算，<b>不含</b>射流武器；计算时不考虑过穿和穿透减速。取整只发生在最后一步。<b>模拟计算数据仅供参考，具体以最新版本游戏内实战为准。</b>
+  </p>
+</header>
+
+<!-- 默认可见：只有在脚本真正跑起来之后才会被隐藏。
+     这样任何「不执行脚本」的预览器都会一直显示这段说明，而不是给一个死界面。 -->
+<div class="boot-notice" id="bootNotice">
+  <b>正在启动计算器…</b><br>
+  如果这段提示一直不消失，说明当前环境<b>没有执行这个页面的脚本</b>——
+  聊天软件（微信 / QQ）的「文件预览」就是这样，只能画出界面外壳，下拉框没有选项、也不会出图表。<br>
+  请把文件保存到手机，然后用<b>系统浏览器</b>打开：<br>
+  · Android：文件管理里长按 → 打开方式 → Chrome<br>
+  · iOS：文件 App 里长按 → 共享 → 用 Safari 打开
+</div>
+<div class="boot-error" id="bootError"></div>
+
+<main>
+  <section class="panel">
+    <h2>输入</h2>
+    <label><span>搜索武器（输入即筛）</span><input id="wSearch" type="text" placeholder="例如：解放 / MG / 霰弹" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:7px 8px;font-size:13px;font-family:inherit"></label>
+    <label><span>武器、战略配备或DoT（或自定义武器）</span><select id="wA"></select></label>
+    <label><span>命中角度（影响穿甲档位）</span><select id="angle"></select></label>
+    <label><span>搜索敌人（输入即筛）</span><input id="eSearch" type="text" placeholder="例如：虫 / 蹂躏 / 坦克" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:7px 8px;font-size:13px;font-family:inherit"></label>
+    <label><span>敌人</span><select id="enemy"></select></label>
+    <label><span>命中部位</span><select id="part"></select></label>
+    <div id="customPartBox" style="display:none;border:1px solid var(--line);border-radius:5px;padding:10px;margin-bottom:12px">
+      <div class="chk-head" style="margin-top:0">自定义部位数值</div>
+      <label><span>部位生命值 / 主体生命值</span><input id="cpHp" type="number" value="250" style="width:48%"><input id="cpMain" type="number" value="250" style="width:48%"></label>
+      <label><span>AV / 耐久% / 爆抗%</span><input id="cpAv" type="number" value="1" style="width:32%"><input id="cpDur" type="number" value="20" style="width:32%"><input id="cpExdr" type="number" value="0" style="width:32%"></label>
+      <label><span>传导率%（-1 = 打的是主体本身）</span><input id="cpTo" type="number" value="100" style="width:100%"></label>
+      <label><span>健康值 / 流血速率（速率 0 = 额外血量）</span><input id="cpHealth" type="number" value="0" style="width:48%"><input id="cpRate" type="number" value="0" style="width:48%"></label>
+      <label style="display:flex;gap:16px"><span style="margin:0">有无传导上限 <input id="cpCap" type="checkbox" style="width:auto"></span><span style="margin:0">是否致死 <input id="cpFatal" type="checkbox" checked style="width:auto"></span></label>
+    </div>
+    <div id="customBox" style="display:none;border:1px solid var(--line);border-radius:5px;padding:10px;margin-bottom:12px">
+      <div class="chk-head" style="margin-top:0">自定义武器数值</div>
+      <label><span>名称</span><input id="cwName" type="text" value="自定义武器" style="width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:6px"></label>
+      <label><span>标准伤害 / 耐久伤害</span><input id="cwDmg" type="number" value="100" style="width:48%"> <input id="cwDmg2" type="number" value="50" style="width:48%"></label>
+      <label><span>穿甲 正/小/大/极</span><input id="cwAp0" type="number" value="2" style="width:23%"><input id="cwAp1" type="number" value="2" style="width:23%"><input id="cwAp2" type="number" value="2" style="width:23%"><input id="cwAp3" type="number" value="0" style="width:23%"></label>
+      <label><span>口径mm / 质量g / 初速 / 阻力%</span><input id="cwCal" type="number" value="8" style="width:23%"><input id="cwMass" type="number" value="10" style="width:23%"><input id="cwV0" type="number" value="800" style="width:23%"><input id="cwDrag" type="number" value="30" style="width:23%"></label>
+      <label><span>弹丸数 / 射速RPM</span><input id="cwPel" type="number" value="1" style="width:48%"><input id="cwRpm" type="number" value="600" style="width:48%"></label>
+      <label><span>爆炸伤害 / 内圈穿甲（0 = 无爆炸）</span><input id="cwExpl" type="number" value="0" style="width:48%"><input id="cwExplAp" type="number" value="3" style="width:48%"></label>
+    </div>
+    <label id="shraWrap" style="display:none"><span>破片命中数 <b id="shraVal">0</b> / <span id="shraMax">30</span> 片</span>
+      <input id="shra" type="range" min="0" max="30" value="0"></label>
+    <div id="blastWrap" style="display:none">
+      <div class="chk-head">爆炸波及部位 <span id="blastCount" class="chk-count">未选</span></div>
+      <div class="chk-note">勾选这次爆炸波及到的部位（击中的那个部位不用勾）。全部按<b>内圈全额伤害</b>计算，不模拟外圈衰减。</div>
+      <div class="chk-tools"><button type="button" id="blastAll">全选</button><button type="button" id="blastNone">清空</button></div>
+      <div id="blastList" class="chk-list"></div>
+    </div>
+    <label><span>对比武器、配备或DoT（可选）</span><select id="wB"></select></label>
+    <label><span>距离上限 <b id="maxSVal">100</b> m</span>
+      <input id="maxS" type="range" min="20" max="200" step="10" value="100"></label>
+    <div id="wInfo" class="note"></div>
+  </section>
+
+  <section class="panel">
+    <h2>结果</h2>
+    <p class="verdict" id="verdict"></p>
+    <div class="kpis" id="kpis"></div>
+        <p class="note" id="ttkNote" style="margin:-4px 0 10px">TTK 计算未考虑换弹、瞄准和反应时间。</p>
+    <div class="bands" id="bands"></div>
+    <div class="axis"><span>0 m</span><span>距离</span><span id="axisMax">100 m</span></div>
+    <div id="chartWrap"></div>
+    <h3 class="sec">这个部位被哪些武器卡阈值（伤害最贴近血量的排前面）</h3>
+    <div id="bestList"></div>
+    <div style="margin:12px 0"><button type="button" id="exportBtn" style="background:var(--accent);color:#111;border:none;border-radius:4px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer">📷 导出为图片</button></div>
+    <h3 class="sec">卡阈值扫描（这把枪在哪些敌人身上卡）</h3>
+    <div id="stuckList"></div>
+    <h3 class="sec">突变点（BTK 阶梯的拐角）</h3>
+    <div id="breakTable"></div>
+    <h3 class="sec">A vs B · 按距离对照</h3>
+    <div id="cmp"></div>
+
+    <details id="calcBox">
+      <summary>单发伤害的计算过程（点开看每一步）</summary>
+      <div class="formula" id="formula"></div>
+    </details>
+
+    <div class="evid">
+      <div>
+        <h3><span class="pill ok">公式已验证</span></h3>
+        <ul>
+          <li>距离衰减：AMW-20 补丁说明 200 m「≈92% / 改前≈52%」双点命中</li>
+          <li>耐久混算：wiki 原文例 BR-14 → 73</li>
+          <li>传导上限：霸王虫腹板 50,000 等价生命 ×10% = 5,000</li>
+          <li>wiki 战术信息「一记爆头消灭蹂躏者」→ R-63 / P-113 均为 1 发 ✓</li>
+          <li>甲弹阈值：AP&gt;AV 100% / AP=AV 65% / AP&lt;AV 0</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="pill guess">含推演假设</span></h3>
+        <ul>
+          <li>多弹丸按<b>全部命中同一部位</b>合计（霰弹枪、MGX-42）</li>
+          <li><b>致死部位</b>：清空部位血量即致死（立即死，或进入流血）；<b>非致死部位</b>只能经传导打死主体，两条路取发数少的</li>
+          <li>流血时间不计入发数：发数只算到「触发致死」为止</li>
+          <li>hp=null 的部位：与主体共用生命池</li>
+          <li>不打到穿甲阈值时 BTK 记为 ∞（跳弹）</li>
+        </ul>
+      </div>
+      <div>
+        <h3><span class="pill miss">数据缺失 / 未建模</span></h3>
+        <ul>
+          <li>流血只折算成「秒」，不计入发数：发数算到触发致死为止，敌人流血期间仍在行动</li>
+          <li>非致死部位被摧毁是否会额外触发主体流血（如强袭虫躯干护甲：表格 fatal=No，正文说会流血）未见规则，v1 依表格</li>
+          <li><b>部位被打爆后不再传导</b>：非致死部位若在自身存活期内传不够主体血量，就只报「摧毁它需要几发」</li>
+          <li>护盾、爆炸、燃烧/毒气 DoT、穿透减速</li>
+          <li>命中角度按「整体命中」处理，不做弹着点分布</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="data.js"></script>
+<script src="engine.js"></script>
+<script>
+(function(){
+  function bootError(err){
+    const box = document.getElementById('bootError');
+    if (!box) return;
+    box.style.display = 'block';
+    box.innerHTML = '<b>页面没能启动。</b>\n' + (err && err.message ? err.message : String(err)) + '\n' + ((err && err.stack) ? String(err.stack).split('\n').slice(0,4).join('\n') : '') +
+      '\n\n请用系统浏览器（Chrome / Safari / Edge）打开本文件；' +
+      '聊天软件里的「文件预览」通常不执行脚本。';
+  }
+  window.addEventListener('error', (e) => bootError(e.error || e.message));
+  try {
+  const D = window.HD2_DATA, E = window.HD2;
+  if (!D || !E) throw new Error('内嵌数据或引擎没加载成功（本文件可能被截断，或不是单文件版）');
+  const $ = (id) => document.getElementById(id);
+
+  /* ---------- 初始化下拉 ---------- */
+  const cats = [...new Set(D.weapons.map(w => w.cat))];
+  function fillWeapons(sel, withNone){
+    sel.innerHTML = (withNone ? '<option value="">（不对比）</option>' : '');
+    if (!withNone) { const c = document.createElement('option'); c.value = 'CUSTOM'; c.textContent = '✎ 自定义武器'; sel.appendChild(c); }
+    for (const c of cats){
+      const g = document.createElement('optgroup');
+      g.label = c;
+      for (const w of D.weapons.filter(w => w.cat === c && (!WEAPON_FILTER || (w.name + ' ' + w.id + ' ' + w.cat).toLowerCase().includes(WEAPON_FILTER)))){
+        const o = document.createElement('option');
+        o.value = w.id; o.textContent = w.name + (w.pellets > 1 ? ` ×${w.pellets}` : '');
+        g.appendChild(o);
+      }
+      sel.appendChild(g);
+    }
+  }
+  let WEAPON_FILTER = '';
+  fillWeapons($('wA'), false);
+  fillWeapons($('wB'), true);
+
+  E.ANGLE_NAMES.forEach((n, i) => {
+    const o = document.createElement('option'); o.value = i; o.textContent = n; $('angle').appendChild(o);
+  });
+
+  let ENEMY_FILTER = '';
+  const FACTION_ORDER = ['终结族', '机器人', '光能者'];
+  function buildEnemySelect(){
+  $('enemy').innerHTML = '';
+  const groups = {};
+  for (const e of D.enemies) {
+    if (ENEMY_FILTER && !(e.enemy + ' ' + e.faction + ' ' + (e.note || '')).toLowerCase().includes(ENEMY_FILTER)) continue;
+    (groups[e.faction] = groups[e.faction] || []).push(e);
+  }
+  const order = FACTION_ORDER.filter(f => groups[f]).concat(Object.keys(groups).filter(f => !FACTION_ORDER.includes(f)));
+  if (!order.length) { const o = document.createElement('option'); o.value = ''; o.textContent = '（无匹配敌人）'; $('enemy').appendChild(o); return; }
+  for (const f of order){
+    const g = document.createElement('optgroup');
+    g.label = f + '（' + groups[f].length + '）';
+    groups[f].sort((x, y) => x.enemy.localeCompare(y.enemy, 'zh'));
+    for (const e of groups[f]){
+      const o = document.createElement('option');
+      o.value = e.enemy; o.textContent = e.enemy;
+      g.appendChild(o);
+    }
+    $('enemy').appendChild(g);
+  }
+  }
+
+  function fillParts(){
+    let e = D.enemies.find(x => x.enemy === $('enemy').value);
+    if (!e) { e = D.enemies[0]; $('enemy').value = e.enemy; }
+    $('part').innerHTML = '';
+    { const c = document.createElement('option'); c.value = '__CUSTOM__'; c.textContent = '✎ 自定义部位'; $('part').appendChild(c); }
+    for (const p of e.parts){
+      const o = document.createElement('option');
+      o.value = p.part;
+      const bits = [];
+      bits.push(p.hp == null ? '共用主体生命池' : 'HP ' + p.hp + (p.mulNote ? '（' + p.mulNote + '）' : '') + (p.displayOnly ? '（仅显示）' : ''));
+      bits.push('AV' + p.av);
+      bits.push('耐久 ' + Math.round((p.durability||0)*100) + '%');
+      if (p.to_main != null) bits.push('传导 ' + Math.round(p.to_main*100) + '%' + (p.cap ? '（有上限）' : ''));
+      bits.push(p.fatal ? '致死' : '非致死');
+      o.textContent = p.part + ' · ' + bits.join(' · ');
+      $('part').appendChild(o);
+    }
+    // 默认选「主体」，不要停在「自定义部位」
+    const cur = $('part').value;
+    if (!cur || cur === '__CUSTOM__') {
+      const d = e.parts.find(x => x.part === '主体') || e.parts[0];
+      if (d) $('part').value = d.part;
+    }
+  }
+
+  // 允许用 hash 覆盖默认组合：#w=APW-1&b=MG-206&e=强袭虫&p=头部&a=0&m=100
+  function applyHash(){
+    let h;
+    try{ h = new URLSearchParams(location.hash.replace(/^#/, '')); }
+    catch(e){ h = new URLSearchParams(''); }
+    const pick = (k, fb) => h.get(k) || fb;
+    const wid = pick('w', 'AR-23');
+    $('wA').value = (wid === 'CUSTOM' || D.weapons.some(x => x.id === wid)) ? wid : 'AR-23';
+    const eid = pick('e', '武斗虫');
+    $('enemy').value = D.enemies.some(x => x.enemy === eid) ? eid : D.enemies[0].enemy;
+    fillParts();
+    const pid = pick('p', '主体');
+    const e = D.enemies.find(x => x.enemy === $('enemy').value);
+    $('part').value = (pid === '__CUSTOM__' || e.parts.some(x => x.part === pid)) ? pid : (e.parts[0] ? e.parts[0].part : '主体');
+    const bid = h.get('b') || '';
+    $('wB').value = D.weapons.some(x => x.id === bid) ? bid : '';
+    $('angle').value = pick('a', '0');
+    const m = Number(pick('m', '100'));
+    $('maxS').value = String(m);
+    $('maxSVal').textContent = m;
+  }
+  function syncHash(){
+    try{
+      const h = new URLSearchParams();
+    h.set('w', $('wA').value); h.set('e', $('enemy').value); h.set('p', $('part').value);
+    if ($('wB').value) h.set('b', $('wB').value);
+    h.set('a', $('angle').value); h.set('m', $('maxS').value);
+      history.replaceState(null, '', '#' + h.toString());
+    }catch(e){ /* file:// 或隐私模式下可能禁止改 URL，忽略即可 */ }
+  }
+  buildEnemySelect();
+  applyHash();
+
+  /* ---------- 取值 ---------- */
+  const CUSTOM = { id: 'CUSTOM', name: '自定义武器', cat: '自定义', type: 'projectile', dmg: 100, dmg2: 50, ap: [2,2,2,0], caliber: 8, mass: 10, v0: 800, drag: 0.3, grav: 1, pellets: 1, rpm: 600, note: '自定义数值（未验证）' };
+  const getW = (id) => id === 'CUSTOM' ? CUSTOM : D.weapons.find(w => w.id === id);
+  const CPART = { part: '自定义部位', hp: 250, av: 1, durability: 0.2, to_main: null, cap: false, fatal: true, exdr: 0, bleed: null, _mainHp: 250 };
+  const getEnemy = () => { const e = D.enemies.find(x => x.enemy === $('enemy').value) || D.enemies[0]; if (!e) return null; return $('part').value === '__CUSTOM__' ? Object.assign({}, e, { mainHp: CPART._mainHp }) : e; };
+  const getPart = () => { const en = getEnemy(); if (!en || !en.parts) return null; return $('part').value === '__CUSTOM__' ? CPART : (en.parts.find(p => p.part === $('part').value) || en.parts[0] || null); };
+  const opts = () => ({ angle: Number($('angle').value), maxS: Number($('maxS').value),
+    shrapnelHits: $('shra') ? Number($('shra').value) : 0,
+    blastParts: $('blastList') ? [...$('blastList').querySelectorAll('input:checked')].map(i => i.value) : [] });
+
+  /* ---------- 渲染 ---------- */
+  function colorFor(btk, maxB){
+    if (!isFinite(btk)) return '#3d3d37';
+    const t = Math.min(1, Math.log2(Math.max(1, btk)) / Math.log2(30));
+    const hue = 140 - 130 * t;        // 绿→黄→红，绝对刻度，跨武器可比
+    return `hsl(${hue} 58% ${52 - 6 * t}%)`;
+  }
+
+  function pathText(part, r){
+    let t;
+    if (r.path === 'part'){
+      const b = r.bleedSec > 0 ? `，随后流血 ${r.bleedSec.toFixed(1)} s 死亡` : '，立即致死';
+      return `打爆致死部位${b}`;
+    } else if (r.path === 'destroy'){
+      const mt = r.maxTransmit == null ? '?' : Math.round(r.maxTransmit);
+      return `只能摧毁该部位（最多传导 ${mt}，打不死本体）`;
+    } else {
+      t = part.to_main == null ? '直击主体致死' : '非致死部位，靠传导打死主体';
+    }
+    return t;
+  }
+  function shotText(r, w){
+    if (!isFinite(r.btk)) return '∞';
+    const u = !w ? '次击发' : w.type === 'melee' ? '次挥击' : w.type === 'throwable' ? '次投掷' : '次击发';
+    const t = E.ttk(r.shots, w && w.rpm);
+    const tt = t == null ? '' : ` · TTK ${t.toFixed(2)} s`;
+    return r.pellets > 1 ? `${r.shots} ${u}（${r.pelletsNeeded} 颗）${tt}` : `${r.shots} ${u}${tt}`;
+  }
+  function pathShort(part, r){
+    if (r.path === 'part') return '部位致死' + (r.bleedSec > 0 ? ' +流血' : '');
+    if (r.path === 'destroy') return '仅能摧毁';
+    return part.to_main == null ? '主体致死' : '传导致死';
+  }
+  function kpi(k, v, small, sub){
+    return `<div class="kpi"><div class="k">${k}</div><div class="v">${v}${small ? '<small>' + small + '</small>' : ''}</div>` +
+      (sub ? `<div class="kpi-sub">${sub}</div>` : '') + '</div>';
+  }
+
+  function syncCustom(){
+    const g = (id, d) => { const v = Number($(id).value); return isNaN(v) ? d : v; };
+    const nm = ($('cwName').value || '自定义武器').replace(/（已修改）$/, '');
+    CUSTOM.name = nm + '（已修改）';
+    CUSTOM.dmg = g('cwDmg', 100); CUSTOM.dmg2 = g('cwDmg2', 50);
+    CUSTOM.ap = [g('cwAp0',2), g('cwAp1',2), g('cwAp2',2), g('cwAp3',0)];
+    CUSTOM.caliber = g('cwCal',8); CUSTOM.mass = g('cwMass',10); CUSTOM.v0 = g('cwV0',800); CUSTOM.drag = g('cwDrag',30)/100;
+    CUSTOM.pellets = Math.max(1, g('cwPel',1)); CUSTOM.rpm = g('cwRpm',600) || null;
+    const ex = g('cwExpl',0); CUSTOM.explosion = ex > 0 ? { dmg: ex, ap: [g('cwExplAp',3), g('cwExplAp',3)-1, g('cwExplAp',3)] } : null;
+  }
+  function render(){
+    const w = getW($('wA').value), e = getEnemy(), part = getPart();
+    const o = opts();
+    const maxS = o.maxS;
+    const wB = $('wB').value ? getW($('wB').value) : null;
+
+    if ($('wA').value === 'CUSTOM') { syncCustom(); $('customBox').style.display = 'block'; } else $('customBox').style.display = 'none';
+    if ($('part').value === '__CUSTOM__') {
+      const g = (id, d) => { const el = $(id); if (!el) return d; const v = Number(el.value); return isNaN(v) ? d : v; };
+      const hp = g('cpHp', 250), health = g('cpHealth', 0), rate = g('cpRate', 0);
+      CPART.hp = hp; CPART._mainHp = g('cpMain', 250); CPART.av = g('cpAv', 1);
+      CPART.durability = g('cpDur', 20) / 100; CPART.exdr = g('cpExdr', 0) / 100;
+      const to = g('cpTo', 100); CPART.to_main = to < 0 ? null : to / 100;
+      CPART.fatal = $('cpFatal').checked; CPART.cap = $('cpCap').checked;
+      CPART.bleed = health > 0 ? (health + ' [' + rate + '/s]') : null;
+      $('customPartBox').style.display = 'block';
+    } else $('customPartBox').style.display = 'none';
+    if (!w) return;
+    if (!getEnemy() || !getPart()) return;
+    if (w.type === 'dot') {
+      const en = getEnemy();
+      const d = E.dotPlan(w, en, o.angle || 0);
+      $('bands').innerHTML = ''; $('chartWrap').innerHTML = '';
+      $('bestList').innerHTML = ''; $('stuckList').innerHTML = ''; $('breakTable').innerHTML = '';
+      const ok = isFinite(d.triggers);
+      $('verdict').innerHTML = ok
+        ? `${w.name} 烧 ${en.enemy}：需要 <b>${d.triggers}</b> 次触发，累计作用 <b>${d.seconds}</b> 秒`
+        : `${w.name} 打 ${en.enemy}：穿甲 ${d.ap} 低于主体护甲 ${d.av}，持续伤害无效`;
+      $('kpis').innerHTML = ok
+        ? kpi('每次触发', d.per.toFixed(0), d.el && d.el !== 1 ? ' 点（×' + d.el + '）' : ' 点') +
+          kpi('触发次数', d.triggers, ' 次') +
+          kpi('累计时长', d.seconds, ' 秒') +
+          kpi('主体护甲', 'AV' + d.av, d.factor === 1 ? '（全伤）' : d.factor === 0.65 ? '（65%）' : '（免疫）')
+        : kpi('结果', '无效', '') + kpi('主体护甲', 'AV' + d.av, '');
+      return;
+    }
+    const sw = $('shraWrap'), bw = $('blastWrap');
+    if (w.shrapnel) { sw.style.display = 'block'; $('shra').max = w.shrapnel.count; $('shraMax').textContent = w.shrapnel.count; }
+    else sw.style.display = 'none';
+    if (w.explosion) {
+      bw.style.display = 'block';
+      const list = $('blastList');
+      if (list.dataset.enemy !== e.enemy || list.dataset.part !== part.part) {
+        const keep = [...list.querySelectorAll('input:checked')].map(i => i.value);
+        list.innerHTML = '';
+        for (const pp of e.parts) {
+          if (pp.part === part.part) continue;
+          const lab = document.createElement('label');
+          const cb = document.createElement('input');
+          cb.type = 'checkbox'; cb.value = pp.part;
+          if (keep.includes(pp.part)) cb.checked = true;
+          const txt = document.createElement('span');
+          txt.innerHTML = pp.part + ' <span class="ap">AV' + pp.av + ' · 爆抗 ' + Math.round((pp.exdr||0)*100) + '%' +
+            ((pp.exdr||0) >= 1 ? ' · 爆抗100%→转主体' : '') + '</span>';
+          lab.appendChild(cb); lab.appendChild(txt); list.appendChild(lab);
+        }
+        list.dataset.enemy = e.enemy; list.dataset.part = part.part;
+      }
+      const n = list.querySelectorAll('input:checked').length;
+      $('blastCount').textContent = n ? ('已选 ' + n + ' 个') : '未选';
+    } else bw.style.display = 'none';
+    $('shraVal').textContent = $('shra').value;
+    const d0 = E.describe(w, part, e, 0, o);
+    const b0 = E.btkAt(w, part, e, 0, o);
+    const bMax = E.btkAt(w, part, e, maxS, o);
+    const bps = E.breakpoints(w, part, e, o);
+    const rows = E.ladder(w, part, e, o);
+
+    const secOf = (t) => (w.type === 'beam' && isFinite(t)) ? (Math.ceil(t / ((w.rpm || 60) / 60) * 10) / 10) : t;
+    const unitOf = (w.type === 'beam' ? ' s' : ' 发');
+    const T = (r) => w.type === 'beam' ? (E.beamTime(w, part, e, 0, o).toFixed(1) + ' s') : shotText(r, w);
+    /* 判决句 */
+    const verdictEl = $('verdict');
+    if (!isFinite(b0.btk)){
+      verdictEl.innerHTML = `<span class="warn">打不穿。</span>${w.name} 的 ${E.ANGLE_NAMES[o.angle]} 穿甲 AP${E.apOf(w,o.angle)} &lt; ${e.enemy}·${part.part} 的护甲 AV${part.av}，命中即跳弹，任何距离都是 ∞ 发。`;
+    } else if (b0.path === 'destroy'){
+      const shots = b0.btk;
+      verdictEl.innerHTML =
+        `${w.name} 打 <b>${e.enemy}·${part.part}</b>：<b>${shots} 发打爆这个部位</b>，` +
+        `但无法清空 main 血量，该部位最多只能传导 <b>${Math.round(b0.maxTransmit)}</b> 伤害，` +
+        `本体有 ${d0.mainMust} 血；<b>打爆后不再传导</b>。`;
+    } else {
+      const first = bps.length ? bps[0] : null;
+      let s = `${w.name} 打 <b>${e.enemy}·${part.part}</b>：`;
+      if (!first){
+        s += `全程 <b>${T(b0)}</b>`;
+      } else {
+        s += `<b>0–${first.at.toFixed(1)} m 需 ${T(b0)}</b>，之后每远一段多一次`;
+        s += `；到 ${maxS} m 已是 <b>${T(bMax)}</b>`;
+      }
+      if (!isFinite(bMax.btk)) s += `（${maxS} m 处已打不穿）`;
+      s += `｜${pathText(part, b0)}`;
+      const best = b0.paths && b0.paths[0];
+      const poolUsed = best ? (best.cripple && best.primary === best.cripple ? best.pool.cripple : best.pool.full) : null;
+      const ti = best ? E.thresholdInfo(b0.btk, best.perHit, poolUsed) : null;
+      if (ti && ti.stuck) {
+        s += ti.kind === 'one'
+          ? `<br><span class="warn">⚠️ 卡阈值：一发刚好打死，只溢出 ${Math.max(0, ti.overflow).toFixed(0)} 点伤害</span>`
+          : `<br><span class="warn">⚠️ 卡阈值：前 ${b0.btk - 1} 发已造成 ${(ti.ratio * 100).toFixed(1)}% 伤害，差 ${ti.missing.toFixed(0)} 点血</span>`;
+      }
+      if (b0.cripple && b0.full && b0.cripple.shots !== b0.full.shots){
+        s += `<br><span class="dim">打残（清空生命值、进入流血）= ${b0.cripple.shots} 次击发；彻底打死（连健康值一起打掉）= ${b0.full.shots} 次击发</span>`;
+        s += '<div class="dim" style="margin-top:4px">某些部位的健康值降为 0 后不再具有碰撞箱，彻底打死的 BTK 仅供参考。</div>';
+      }
+      verdictEl.innerHTML = s;
+    }
+
+    /* KPI */
+    $('kpis').innerHTML =
+      kpi(w.type === 'beam' ? '累计照射（0 m）' : '贴身（0 m）', w.type === 'beam' ? (isFinite(b0.btk) ? E.beamTime(w, part, e, 0, o).toFixed(1) : '∞') : (isFinite(b0.btk) ? b0.btk : '∞'), w.type === 'beam' ? ' 秒' : ' 发') +
+      (() => {
+        const ex = E.explosionOf(w, part, e, 0, o);
+        const sh = E.shrapnelOf(w, part, 0, o);
+        const ballistic = d0.per * (w.pellets || 1);
+        const total = ballistic + ex.toPart + sh.toPart;
+        const parts = [];
+        if (w.explosion) parts.push('母射弹 <b>' + Math.floor(ballistic) + '</b>');
+        if (ex.toPart) parts.push('爆炸 <b>' + ex.toPart + '</b>');
+        if (sh.hits) parts.push('破片 ×' + sh.hits + ' <b>' + Math.floor(sh.toPart) + '</b>');
+        const sub = parts.length > 1 ? '合计 = ' + parts.join(' + ') : null;
+        return kpi(w.explosion || w.shrapnel ? '单发伤害（求和）' : '单发伤害（0 m）', Math.floor(total), ' 点', sub);
+      })() +
+      kpi('致死方式', pathShort(part, b0)) +
+      kpi(`${maxS} m 处`, isFinite(bMax.btk) ? secOf(bMax.btk) : '∞', w.type === 'beam' ? ' 秒' : ' 发');
+
+    /* 阶梯条 */
+    const maxB = Math.max(...rows.map(r => isFinite(r.btk) ? r.btk : 0), 1);
+    $('bands').innerHTML = rows.map(r => {
+      const pct = ((r.to - r.from) / maxS) * 100;
+      const c = colorFor(r.btk);
+      const fg = isFinite(r.btk) ? '#0e0e0c' : '#cfcbbf';
+      const lab = pct > 9 ? `<span>${isFinite(r.btk) ? secOf(r.btk) + unitOf : '∞'}</span>` : '';
+      return `<div class="band" style="width:${pct}%;background:${c};color:${fg}" title="${r.from.toFixed(1)}–${r.to.toFixed(1)} m：${isFinite(r.btk)?secOf(r.btk)+unitOf:'∞'}">${lab}</div>`;
+    }).join('');
+    $('axisMax').textContent = maxS + ' m';
+
+    /* 图表 */
+    $('chartWrap').innerHTML = chart([{w, part, e, label: w.name, color: 'var(--accent)'}].concat(
+      wB ? [{w: wB, part, e, label: wB.name, color: 'var(--blue)'}] : []
+    ), maxS);
+
+    /* 反查：这个部位被哪些武器卡阈值（伤害与血量最接近的排前面） */
+    (() => {
+      const hits = [];
+      for (const ww of D.weapons) {
+        if (ww.type === 'stratagem' || ww.type === 'throwable' || ww.type === 'melee') continue;
+        if (!(ww.dmg > 0 || ww.explosion)) continue;
+        const rr = E.btkAt(ww, part, e, 0, o);
+        if (!isFinite(rr.btk) || rr.btk > 3 || !rr.paths[0]) continue;
+        const pr = rr.paths[0];
+        const pool = (pr.cripple && pr.primary === pr.cripple) ? pr.pool.cripple : pr.pool.full;
+        const ti = E.thresholdInfo(rr.btk, pr.perHit, pool);
+        if (!ti || !ti.stuck) continue;
+        hits.push({ name: ww.name, btk: rr.btk, ttk: E.ttk(rr.btk, ww.rpm), ti, per: pr.perHit, pool });
+      }
+      hits.sort((x, y) => x.btk - y.btk ||
+        (x.ti.kind === 'one' ? x.ti.overflow : -x.ti.ratio) - (y.ti.kind === 'one' ? y.ti.overflow : -y.ti.ratio));
+      $('bestList').innerHTML = hits.length
+        ? '<table><thead><tr><th>武器</th><th>BTK</th><th>TTK</th><th>判定</th></tr></thead><tbody>' +
+          hits.slice(0, 12).map((h, i) => '<tr><td>' + (i === 0 ? '🏆 ' : '') + h.name + '</td><td>' + h.btk + ' 次</td><td>' +
+            (h.ttk == null ? '—' : h.ttk.toFixed(2) + ' s') + '</td><td>' +
+            (h.ti.kind === 'one' ? '一发即杀，余量 ' + Math.max(0, h.ti.overflow).toFixed(0)
+              : '前 ' + (h.btk - 1) + ' 发 ' + (h.ti.ratio * 100).toFixed(1) + '% · 差 ' + h.ti.missing.toFixed(0)) +
+            '</td></tr>').join('') + '</tbody></table>' +
+          (hits.length > 12 ? '<p class="note">共 ' + hits.length + ' 把，只列前 12。</p>' : '')
+        : '<p class="note">这个部位没有被任何常规武器卡阈值。</p>';
+    })();
+
+    /* 卡阈值扫描 */
+    (() => {
+      const hits = [];
+      for (const en of D.enemies) for (const pt of en.parts) {
+        if (!pt.fatal) continue;
+        const r = E.btkAt(w, pt, en, 0, o);
+        if (!isFinite(r.btk) || r.btk > 3 || !r.paths[0]) continue;
+        const pr = r.paths[0];
+        const pool = (pr.cripple && pr.primary === pr.cripple) ? pr.pool.cripple : pr.pool.full;
+        const ti = E.thresholdInfo(r.btk, pr.perHit, pool);
+        if (ti && ti.stuck) hits.push({ en: en.enemy, pt: pt.part, btk: r.btk, ti });
+      }
+      hits.sort((a, b) => {
+        const ao = a.ti.kind === 'one' ? 1 : 0, bo = b.ti.kind === 'one' ? 1 : 0;
+        if (ao !== bo) return ao - bo;                 // 前 N 发占比的排前面，一发即杀排后面
+        return bo ? 0 : b.ti.ratio - a.ti.ratio;
+      });
+      $('stuckList').innerHTML = hits.length
+        ? '<table><thead><tr><th>敌人·部位</th><th>BTK</th><th>判定</th></tr></thead><tbody>' +
+          hits.map(h => '<tr><td>' + h.en + '·' + h.pt + '</td><td>' + h.btk + ' 次</td><td>' +
+            (h.ti.kind === 'one' ? '一发刚好打死（溢出 ' + Math.max(0, h.ti.overflow).toFixed(0) + '）'
+              : '前 ' + (h.btk - 1) + ' 发 ' + (h.ti.ratio * 100).toFixed(1) + '% · 差 ' + h.ti.missing.toFixed(0)) +
+            '</td></tr>').join('') + '</tbody></table>' +
+          ''
+        : '<p class="note">这把武器在所有敌人身上都不卡阈值。</p>';
+      if (hits.length) {
+        const tbl = $('stuckList').innerHTML;
+        $('stuckList').innerHTML = '<details' + (hits.length <= 6 ? ' open' : '') + '><summary>共 <b>' + hits.length + '</b> 处卡阈值（点击展开/收起）</summary>' + tbl + '</details>';
+      }
+    })();
+
+    /* 突变点表 */
+    if (bps.length){
+      const SHOW = 15;
+      const shown = bps.slice(0, SHOW);
+      $('breakTable').innerHTML =
+        `<table><thead><tr><th>距离</th><th>变化</th><th>触发原因</th><th class="num">该处单发伤害</th><th class="num">距离系数 rd</th></tr></thead><tbody>` +
+        shown.map(b => {
+          const dd = E.perShotDamage(w, part, b.at, o);
+          const rd = E.distanceFactor(w, b.at);
+          return `<tr><td>${b.at.toFixed(1)} m</td><td>${b.from} → ${b.to} 发</td><td>${b.why}</td><td class="num">${dd.toFixed(1)}</td><td class="num">${(rd*100).toFixed(1)}%</td></tr>`;
+        }).join('') + `</tbody></table>` +
+        (bps.length > SHOW
+          ? `<p class="note">共 ${bps.length} 个突变点，此处只列前 ${SHOW} 个（其余见上方阶梯条与曲线）。</p>`
+          : '');
+    } else {
+      $('breakTable').innerHTML = `<p class="note">${maxS} m 内没有突变点${w.drag === 0 ? '（该武器阻力系数为 0%，不衰减）' : ''}。</p>`;
+    }
+
+    /* 对比 */
+    if (wB){
+      const marks = [0, 10, 25, 50, 75, 100, 150, 200].filter(x => x <= maxS);
+      if (marks[marks.length-1] !== maxS) marks.push(maxS);
+      $('cmp').innerHTML =
+        `<div><table><thead><tr><th>距离</th><th class="num">A</th><th class="num">B</th><th class="num">差</th></tr></thead><tbody>` +
+        marks.map(m => {
+          const a = E.btkAt(w, part, e, m, o).btk;
+          const b = E.btkAt(wB, part, e, m, o).btk;
+          const diff = (isFinite(a) && isFinite(b)) ? (a - b) : null;
+          const sign = diff == null ? '—' : (diff > 0 ? `+${diff}` : diff === 0 ? '0' : `${diff}`);
+          const cls = diff == null ? '' : (diff < 0 ? 'style="color:var(--accent2)"' : diff > 0 ? 'style="color:var(--bad)"' : '');
+          return `<tr><td>${m} m</td><td class="num">${isFinite(a)?a:'∞'}</td><td class="num">${isFinite(b)?b:'∞'}</td><td class="num" ${cls}>${sign}</td></tr>`;
+        }).join('') + `</tbody></table></div>` +
+        `<div class="note">差为负 = A 更省发数。${wB.note ? '<br>B：' + wB.note : ''}${w.note ? '<br>A：' + w.note : ''}</div>`;
+    } else {
+      $('cmp').innerHTML = '';
+    }
+
+    /* 计算过程 */
+    const k = d0.k;
+    const dur = part.durability || 0;
+    const base = (w.dmg*(1-dur) + w.dmg2*dur);
+    $('formula').innerHTML =
+`<span class="dim">// 目标：${e.enemy} · ${part.part}（AV${part.av}，耐久 ${(dur*100).toFixed(0)}%）</span>
+① 耐久混算  = ${w.dmg}×${(1-dur).toFixed(2)} + ${w.dmg2}×${dur.toFixed(2)} = <span class="hl">${base.toFixed(2)}</span>
+② 甲弹系数  = AP${E.apOf(w,o.angle)} vs AV${part.av} → <span class="hl">${k === null ? '?' : (k*100).toFixed(0)+'%'}</span> ${k===0?'（跳弹）':''}
+③ ${w.type === 'arc' ? '电弧射程  = ' + w.range + ' m（无弹道衰减，超出即打不到）' : '速度衰减  α = −4.71e−4 × ' + w.drag.toFixed(2) + ' × ' + w.caliber + '² ÷ ' + w.mass + ' = <span class="hl">' + E.alpha(w).toExponential(3) + '</span>\n   rv(s) = v₀·e^(αs)，rd(s) = 0.75·rv² + 0.25\n   0 m：rv = ' + d0.rv.toFixed(4) + ' → rd = <span class="hl">' + d0.rd.toFixed(4) + '</span>\n   ' + maxS + ' m：rd = ' + E.distanceFactor(w,maxS).toFixed(4)}
+④ 单颗伤害  = ${base.toFixed(2)} × ${k===null?'?':k.toFixed(2)} × ${d0.rd.toFixed(4)} = <span class="hl">${d0.per.toFixed(2)}</span>（展示取整 ${Math.floor(d0.per)}）${w.pellets>1 ? '\n   一轮 ' + w.pellets + ' 颗 → 全中合计 <span class="hl">' + (d0.per*w.pellets).toFixed(1) + '</span>' : ''}
+⑤ 传导主体  = ${part.to_main==null ? '命中主体本身，不经传导' : d0.per.toFixed(2)+' × '+(part.to_main*100).toFixed(0)+'% = <span class="hl">'+d0.transmit.toFixed(2)+'</span>（每颗）'}
+⑥ 击杀路径
+   ${d0.partPool ? '部位池：生命值 ' + d0.partPool.full + '（健康值 ' + d0.partPool.health + '，流血 ' + d0.partPool.rate + '/s）' : '部位与主体共用生命池'}
+   ${d0.path === 'part' ? 'A 打爆致死部位：需 ' + (d0.cripple ? d0.cripple.pellets + ' 颗 = ' + d0.cripple.shots + ' 次击发' : d0.full.pellets + ' 颗 = ' + d0.full.shots + ' 次击发') : ''}${d0.path === 'main' ? 'A 传导打死主体：需 ' + (d0.cripple ? d0.cripple.pellets + ' 颗 = ' + d0.cripple.shots + ' 次击发' : d0.full.pellets + ' 颗 = ' + d0.full.shots + ' 次击发') : ''}${d0.path === 'destroy' ? 'A 仅能摧毁该部位：需 ' + d0.full.pellets + ' 颗 = ' + d0.full.shots + ' 次击发（传不够，打不死本体）' : ''}
+   主体池：生命值 ${d0.mainPool.full}（健康值 ${d0.mainPool.health}，流血 ${d0.mainPool.rate}/s）
+⑦ 取整      只在最后取一次 → <span class="hl">${isFinite(d0.btk) ? d0.shots + ' 次击发 / ' + d0.pelletsNeeded + ' 颗' : '∞'}</span>${d0.cripple && d0.full && d0.cripple.shots !== d0.full.shots ? '\n   打残（进入流血）= ' + d0.cripple.shots + ' 次击发；彻底打死（连健康值）= ' + d0.full.shots + ' 次击发' : ''}`;
+
+    /* 武器信息 */
+    const bits = w.type === 'arc' ? [`${w.cat}`, `电弧 · 射程 ${w.range} m`, `${w.pellets} 道/次`] : [`${w.cat}`, `${w.caliber} mm / ${w.mass} g / ${w.v0} m/s`, `阻力 ${(w.drag*100).toFixed(0)}%`, `重力 ${(w.grav*100).toFixed(0)}%`];
+    if (w.pellets > 1) bits.push(`${w.pellets} 弹丸`);
+    if (w.drag === 0) bits.push('<b>0% 阻力 → 无衰减</b>');
+    $('wInfo').innerHTML = bits.join(' · ') + (w.note ? `<br><span class="muted">${w.note}</span>` : '');
+  }
+
+  /* ---------- SVG 阶梯图 ---------- */
+  function chart(series, maxS){
+    const bval = (sr, d) => {
+      let v = E.btkAt(sr.w, sr.part, sr.e, d, opts()).btk;
+      if (sr.w.type === 'beam' && isFinite(v)) v = Math.ceil(v / ((sr.w.rpm || 60) / 60) * 10) / 10;
+      return v;
+    };
+    const W = 720, H = 250, L = 44, R = 14, T = 14, B = 30;
+    const vals = [];
+    for (const s of series){
+      for (let d = 0; d <= maxS; d += maxS/100){
+        const b = bval(s, d);
+        vals.push(isFinite(b) ? b : null);
+      }
+    }
+    const finite = vals.filter(v => v != null);
+    const maxY = Math.max(2, Math.ceil(Math.max(...finite) * 1.1));
+    const x = (d) => L + (d / maxS) * (W - L - R);
+    const y = (v) => H - B - (Math.min(v, maxY) / maxY) * (H - T - B);
+
+    let g = '';
+    // 网格 + y 轴
+    const steps = [1, 2, 3, 5, 10, 15, 20, 25, 50, 100, 200];
+    const stepY = steps.find(st => maxY / st <= 8) || 200;
+    const yTicks = [];
+    for (let v = stepY; v <= maxY; v += stepY) yTicks.push(v);
+    for (const t of yTicks){
+      g += `<line x1="${L}" y1="${y(t)}" x2="${W-R}" y2="${y(t)}" stroke="#2a2a25" stroke-width="1"/>`;
+      g += `<text x="${L-8}" y="${y(t)+4}" fill="#8b877b" font-size="11" text-anchor="end">${t}</text>`;
+    }
+    // x 轴
+    g += `<line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="#3a3a33"/>`;
+    for (let d = 0; d <= maxS; d += maxS/5){
+      g += `<text x="${x(d)}" y="${H-B+18}" fill="#8b877b" font-size="11" text-anchor="middle">${Math.round(d)}</text>`;
+    }
+    g += `<text x="${(L+W-R)/2}" y="${H-4}" fill="#8b877b" font-size="11" text-anchor="middle">距离 (m)${series[0] && series[0].w.type === 'beam' ? ' · 纵轴 = 秒' : ''}</text>`;
+
+    // 阶梯线
+    for (const s of series){
+      let path = '', started = false, prevY = null;
+      for (let d = 0; d <= maxS + 1e-9; d += Math.max(0.25, maxS/400)){
+        const b = bval(s, d);
+        const yy = y(isFinite(b) ? b : maxY);
+        if (!started){ path += `M ${x(d)} ${yy}`; started = true; }
+        else {
+          path += ` L ${x(d)} ${prevY}`;      // 水平到新 x
+          if (Math.abs(yy - prevY) > 0.01) path += ` L ${x(d)} ${yy}`;
+        }
+        prevY = yy;
+      }
+      g += `<path d="${path}" fill="none" stroke="${s.color}" stroke-width="2"/>`;
+    }
+    // 图例
+    series.forEach((s, i) => {
+      const lx = L + 10, ly = T + 4 + i * 16;
+      g += `<rect x="${lx}" y="${ly}" width="9" height="9" fill="${s.color}"/>`;
+      g += `<text x="${lx + 14}" y="${ly + 9}" fill="#e9e6dd" font-size="11">${s.label}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
+  }
+
+  /* ---------- 事件 ---------- */
+  $('wSearch').addEventListener('input', () => {
+    WEAPON_FILTER = $('wSearch').value.trim().toLowerCase();
+    const keep = $('wA').value;
+    fillWeapons($('wA'), false);
+    $('wA').value = D.weapons.some(w => w.id === keep) ? keep : (D.weapons.find(w => (!WEAPON_FILTER || (w.name + ' ' + w.id + ' ' + w.cat).toLowerCase().includes(WEAPON_FILTER))) || {}).id;
+    if ($('wA').value) render();
+  });
+  $('wA').addEventListener('change', () => { render(); syncHash(); });
+  $('wB').addEventListener('change', () => { render(); syncHash(); });
+  $('angle').addEventListener('change', () => { render(); syncHash(); });
+  $('exportBtn').addEventListener('click', () => {
+    const w = getW($('wA').value), en = getEnemy(), pt = getPart(), o = opts();
+    if (!w || !en || !pt) return;
+    const r = E.btkAt(w, pt, en, 0, o);
+    const d = E.describe(w, pt, en, 0, o);
+    const CW = 900, CH = 520;
+    const cv = document.createElement('canvas');
+    cv.width = CW * 2; cv.height = CH * 2;
+    const g = cv.getContext('2d');
+    g.scale(2, 2);
+    g.fillStyle = '#0e0e0c'; g.fillRect(0, 0, CW, CH);
+    g.fillStyle = '#f2c14e'; g.fillRect(0, 0, CW, 6);
+    g.fillStyle = '#8b877b'; g.font = '14px system-ui, sans-serif';
+    g.fillText('绝地潜兵 2 · 武器击杀计算器', 40, 48);
+    g.fillStyle = '#e9e6dd'; g.font = 'bold 26px system-ui, sans-serif';
+    g.fillText(w.name + '  →  ' + en.enemy + ' · ' + pt.part, 40, 92);
+    g.font = 'bold 64px system-ui, sans-serif'; g.fillStyle = '#f2c14e';
+    const big = !isFinite(r.btk) ? '打不穿' : (w.type === 'beam' ? E.beamTime(w, pt, en, 0, o).toFixed(1) + ' s' : r.btk + ' 次击发');
+    g.fillText(big, 40, 176);
+    g.font = '24px system-ui, sans-serif'; g.fillStyle = '#e9e6dd';
+    if (isFinite(r.btk) && w.type !== 'beam') {
+      const t = E.ttk(r.btk, w.rpm);
+      g.fillText('TTK ' + (t == null ? '—' : t.toFixed(2) + ' s') + (w.pellets > 1 ? '　·　需命中 ' + r.pelletsNeeded + ' 颗' : ''), 40, 216);
+    }
+    g.font = '18px system-ui, sans-serif'; g.fillStyle = '#8b877b';
+    g.fillText('单发 ' + Math.floor(d.perShot) + ' 点　·　距离 0 m　·　' + E.ANGLE_NAMES[o.angle] + '　·　耐久 ' + Math.round((pt.durability || 0) * 100) + '%　·　AV' + pt.av, 40, 252);
+    if (r.cripple && r.full) g.fillText('打残 ' + r.cripple.shots + ' 次　·　彻底打死 ' + r.full.shots + ' 次', 40, 284);
+    const ti = r.paths[0] ? E.thresholdInfo(r.btk, r.paths[0].perHit, (r.paths[0].cripple && r.paths[0].primary === r.paths[0].cripple) ? r.paths[0].pool.cripple : r.paths[0].pool.full) : null;
+    if (ti && ti.stuck) {
+      g.fillStyle = '#d96b52'; g.font = 'bold 20px system-ui, sans-serif';
+      g.fillText(ti.kind === 'one' ? '⚠ 卡阈值：一发刚好打死（余量 ' + Math.max(0, ti.overflow).toFixed(0) + '）'
+        : '⚠ 卡阈值：前 ' + (r.btk - 1) + ' 发已 ' + (ti.ratio * 100).toFixed(1) + '%，差 ' + ti.missing.toFixed(0) + ' 点血', 40, 320);
+    }
+    g.fillStyle = '#6f6b61'; g.font = '13px system-ui, sans-serif';
+    g.fillText('数据：helldivers.wiki.gg/zh　·　只在最后一步取整　·　爆炸按内圈全额', 40, CH - 42);
+    g.fillText('PseudoAegle · DeepSeek Harness', 40, CH - 18);
+    const a = document.createElement('a');
+    a.download = (w.name + '_' + en.enemy + '_' + pt.part + '.png').replace(/[\\/:*?"<>|]/g, '_');
+    a.href = cv.toDataURL('image/png');
+    a.click();
+  });
+
+  $('eSearch').addEventListener('input', () => {
+    ENEMY_FILTER = $('eSearch').value.trim().toLowerCase();
+    const keep = $('enemy').value;
+    buildEnemySelect();
+    if (!$('enemy').value) { $('enemy').innerHTML = '<option value="">（无匹配敌人，请修改搜索词）</option>'; $('part').innerHTML = '<option value="">—</option>'; render(); return; }
+    const opt = [...$('enemy').options].find(o => o.value === keep);
+    if (keep && opt) $('enemy').value = keep; else if ($('enemy').options.length) $('enemy').value = $('enemy').options[0].value;
+    fillParts(); render();
+  });
+  $('enemy').addEventListener('change', () => { fillParts(); render(); syncHash(); });
+  $('part').addEventListener('change', () => { render(); syncHash(); });
+  $('shra').addEventListener('input', () => { $('shraVal').textContent = $('shra').value; render(); });
+  ['cwName','cwDmg','cwDmg2','cwAp0','cwAp1','cwAp2','cwAp3','cwCal','cwMass','cwV0','cwDrag','cwPel','cwRpm','cwExpl','cwExplAp'].forEach(id => {
+    const el = $(id); if (el) el.addEventListener('input', () => { if ($('wA').value === 'CUSTOM') render(); });
+  });
+
+  ['cpHp','cpMain','cpAv','cpDur','cpExdr','cpTo','cpHealth','cpRate'].forEach(id => { const el = $(id); if (el) el.addEventListener('input', render); });
+  ['cpCap','cpFatal'].forEach(id => { const el = $(id); if (el) el.addEventListener('change', render); });
+  $('blastList').addEventListener('change', render);
+  $('blastAll').addEventListener('click', () => { $('blastList').querySelectorAll('input').forEach(i => i.checked = true); render(); });
+  $('blastNone').addEventListener('click', () => { $('blastList').querySelectorAll('input').forEach(i => i.checked = false); render(); });
+  $('maxS').addEventListener('input', () => { $('maxSVal').textContent = $('maxS').value; render(); syncHash(); });
+
+  render();
+  syncHash();
+  document.getElementById('bootNotice').style.display = 'none';
+  } catch (err) {
+    var n = document.getElementById('bootNotice');
+    if (n) n.style.display = 'none';
+    bootError(err);
+  }
+})();
+</script>
+
+<footer style="max-width:1400px;margin:28px auto 44px;padding:0 24px;color:#6f6b61;font-size:12px;line-height:1.9">
+  <div><b style="color:#8b877b">数据来源</b>：<a href="https://helldivers.wiki.gg/zh/wiki/%E4%BC%A4%E5%AE%B3" target="_blank" style="color:#8b877b">helldivers.wiki.gg/zh</a> ——「伤害」页、详细武器数据、部位分析表（2026-11 抓取）</div>
+  <div><b style="color:#8b877b">制作</b>：PseudoAegle（数据整理与需求）· DeepSeek Harness / deepseek-flash（爬取、建模与实现）</div>
+  <div>模拟计算数据仅供参考，具体以最新版本游戏内实战为准。</div>
+</footer>
+</body>
+</html>
