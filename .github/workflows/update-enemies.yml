@@ -1,0 +1,21 @@
+name: update-enemies
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node update-enemies.js --write
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'data: 同步 wiki 新敌人'
+          file_pattern: 'enemies.json'
