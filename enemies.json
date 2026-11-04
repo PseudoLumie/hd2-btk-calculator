@@ -9185,5 +9185,143 @@
     "exdr": 0
    }
   ]
+ },
+ {
+  "enemy": "毒瘴喷涌虫",
+  "faction": "机器人",
+  "tier": "",
+  "mainHp": 750,
+  "note": "",
+  "parts": [
+   {
+    "part": "主体",
+    "count": 1,
+    "hp": 750,
+    "av": 2,
+    "durability": 0.5,
+    "to_main": null,
+    "cap": null,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 0
+   },
+   {
+    "part": "头部",
+    "count": 1,
+    "hp": 300,
+    "av": 2,
+    "durability": 0,
+    "to_main": 1,
+    "cap": true,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 1
+   },
+   {
+    "part": "口部",
+    "count": 1,
+    "hp": 250,
+    "av": 0,
+    "durability": 0,
+    "to_main": 1,
+    "cap": true,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 1
+   },
+   {
+    "part": "背甲",
+    "count": 1,
+    "hp": 500,
+    "av": 2,
+    "durability": 0.8,
+    "to_main": 0.2,
+    "cap": true,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 0
+   },
+   {
+    "part": "尾部",
+    "count": 1,
+    "hp": 750,
+    "av": 0,
+    "durability": 1,
+    "to_main": 0.6,
+    "cap": true,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 0
+   },
+   {
+    "part": "前腿",
+    "count": 2,
+    "hp": 200,
+    "av": 2,
+    "durability": 0,
+    "to_main": 0.5,
+    "cap": false,
+    "fatal": false,
+    "bleed": null,
+    "exdr": 1
+   },
+   {
+    "part": "后腿",
+    "count": 2,
+    "hp": 250,
+    "av": 2,
+    "durability": 0.3,
+    "to_main": 0.5,
+    "cap": false,
+    "fatal": false,
+    "bleed": null,
+    "exdr": 1
+   }
+  ]
+ },
+ {
+  "enemy": "毒瘴食腐虫",
+  "faction": "机器人",
+  "tier": "",
+  "mainHp": 60,
+  "note": "",
+  "parts": [
+   {
+    "part": "主体",
+    "count": 1,
+    "hp": 60,
+    "av": 0,
+    "durability": 0,
+    "to_main": null,
+    "cap": null,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 0
+   },
+   {
+    "part": "头部",
+    "count": 1,
+    "hp": 20,
+    "av": 0,
+    "durability": 0,
+    "to_main": 1,
+    "cap": true,
+    "fatal": true,
+    "bleed": null,
+    "exdr": 1
+   },
+   {
+    "part": "肢足",
+    "count": 6,
+    "hp": 30,
+    "av": 0,
+    "durability": 0,
+    "to_main": 0.3,
+    "cap": true,
+    "fatal": false,
+    "bleed": null,
+    "exdr": 1
+   }
+  ]
  }
 ]
